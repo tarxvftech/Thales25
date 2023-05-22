@@ -11,7 +11,16 @@ $fn=100;
 
 batt18650_l = 65;
 batt18650_d = 18;
-
+module cylarc(diameter, height, width){
+//90 degrees assumed
+	translate([0,0,-height/2]) intersection(){
+		difference(){
+			translate([0,0,height/2]) cylinder(d=diameter+width,h=height,center=true);
+			translate([0,0,height/2]) cylinder(d=diameter,h=height*2,center=true);
+		}
+		translate([0,0,0]) cube([diameter+width,diameter+width,height],center=false);
+	}
+}
 module batt18650(){
 	l=batt18650_l; //mm
 	d=batt18650_d;  //mm
@@ -53,8 +62,8 @@ module battery_tabs(){
 	hole_d = 3; //probably 3, measured 2.9, but with tool not meant for it //mm
 		//screw is countersunk
 	countersink_d = 6;
-	short_l = 16;//mm
-	long_l = 18;//mm
+	short_l = 14;//mm
+	long_l = 16;//mm
 	arc_cutout_circle_radius=26; //measured using h/2+w**2/(8h) method and some guesswork
 	height=1.7;//1.8 sometimes
 	flat_part_l = 10;//mm
@@ -75,33 +84,18 @@ module battery_tabs(){
 					}
 				}
 				non_flat_part_l = long_l - flat_part_l;
-				hull(){
-					color("red",.5) translate([-width/2,flat_part_l/2,-height/2]) rotate([0,0,0]) cube([width,.01,height]);
-					color("blue",.5) translate([-width/2,7.5,-height*5/4]) rotate([0,-angle,0]) cube([width,.01,height]);
+				hull(){ //step down to match the angled bit
+					color("red",.5) translate([-width/2,flat_part_l/2,-height/2]) rotate([0,0,0]) cube([width,.001,height]);
+					color("blue",.5) translate([-width/2,7.5,-height*5/4]) rotate([0,-angle,0]) cube([width,.001,height]);
 				}
-				hull(){
+				hull(){ //the angled bit that will get cut by the circle
 					color("blue",.5) translate([-width/2,7.5,-height*5/4]) rotate([0,-angle,0]) cube([width,1,height]);
 					color("green",.5) translate([-width/2,long_l,-height*5/4]) rotate([0,-angle,0]) cube([width,.01,height]);
 				}
 				//translate([-width/2,flat_part_l,-height*5/4]) rotate([0,-angle,0]) cube([width,non_flat_part_l,height]);
 			}
 			translate([width/(3.1415/2),long_l+arc_cutout_circle_radius-6,0]) cylinder(r=arc_cutout_circle_radius, h=10,center=true);
-			gentleize = [
-				[6,20,0],
-				[5,11.5,0],
-				[4.8,11.8,0],
-				[4.6,12,0],
-				[4.4,12.1,0],
-				[4.2,12.2,0],
-				[4,13,0],
-				[3,15,0],
-			];
-			hull(){
-				for( i = gentleize){
-					echo(i);
-translate([i[0],i[1],0]) rotate([0,0,i[2]]) cube([.1,.1,10],center=true);
-				}
-			}
+			translate([width/2-2.5,short_l-flat_part_l/2-1,0]) rotate([0,0,-10]) cylarc(diameter=5,height=10,width=5);
 		}
 	}
 	translate([-6/2,-(55-11)/2,-height/2-sunken]) union(){
@@ -134,8 +128,8 @@ module t25_battery_top(){
 	}
 	module cutout_basic(){
 		cutout_length = 31;//mm
-		cutout_width = 13.5;
-		//cylinder blocked out to ~14mm wide
+		cutout_width = 15; //first was 13.5
+		//cylinder blocked out to ~14mm wide - maybe more
 		//male width is 13mm, because of some placekeeping aluminum that part fits within
 		intersection(){
 			translate([0,0,-cutout_height/2]) cylinder(d=cutout_length, h=cutout_height,center=true);
@@ -161,6 +155,12 @@ module t25_battery_top(){
 			
 		}
 	}
+	module forced_walls(thickness=.8){ //measured as 1 mm walls
+	translate([0,0,-battery_lid_external_height/2]) difference(){
+		cube([battery_box_depth,battery_box_width,battery_lid_external_height],center=true);
+		cube([battery_box_depth-thickness,battery_box_width-thickness,battery_lid_external_height*2],center=true);
+	}
+	}
 	union(){
 		difference(){
 			translate([0,0,-battery_lid_external_height/2]) cube([battery_box_depth,battery_box_width, battery_lid_external_height],center=true);
@@ -177,11 +177,13 @@ module t25_battery_top(){
 
 
 		}
-		battery_tabs();
+		/*battery_tabs();*/
 		connect_iso();
+		forced_walls(thickness=.8);
 	}
 }
 t25_battery_top();
+/*battery_tabs();*/
 
 //OEM battery box has a very slight curve to it, but I don't think I care enough right now.
 
